@@ -57,7 +57,7 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
         let message;
         if (fcn === "createCar" || fcn === "createPrivateCarImplicitForOrg1"
             || fcn == "createPrivateCarImplicitForOrg2") {
-            result = await contract.submitTransaction(fcn, args[0], args[1], args[2], args[3], args[4]);
+            result = await contract.submitTransaction(fcn, args[0], args[1], args[2], args[3], args[4], org_name);
             message = `Successfully added the car asset with key ${args[0]}`
 
         } else if (fcn === "changeCarOwner") {
@@ -74,6 +74,11 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
                 .setTransient(transientDataBuffer)
                 .submit()
             message = `Successfully submitted transient data`
+        }
+        else if (fcn === "createProduct"){
+            result = await contract.submitTransaction(fcn, args[0], args[1], args[2], args[3], args[4], org_name);
+            message = `Successfully added the car asset with key ${args[0]}`
+
         }
         else {
             return `Invocation require either createCar or changeCarOwner as function but got ${fcn}`

@@ -81,9 +81,13 @@ function getErrorMessage(field) {
 app.post('/users', async function (req, res) {
     var username = req.body.username;
     var orgName = req.body.orgName;
+    var registrationToken = req.body.registrationToken;
+    var password = req.body.password;
     logger.debug('End point : /users');
     logger.debug('User name : ' + username);
     logger.debug('Org name  : ' + orgName);
+    logger.debug('Registration token  : ' + registrationToken);
+    logger.debug('Password  : ' + password);
     if (!username) {
         res.json(getErrorMessage('\'username\''));
         return;
@@ -91,19 +95,30 @@ app.post('/users', async function (req, res) {
     if (!orgName) {
         res.json(getErrorMessage('\'orgName\''));
         return;
+    }  
+    if (!registrationToken) {
+        res.json(getErrorMessage('\'registrationToken\''));
+        return;
+    } 
+    if (!password) {
+        res.json(getErrorMessage('\'password\''));
+        return;
     }
+
 
     var token = jwt.sign({
         exp: Math.floor(Date.now() / 1000) + parseInt(constants.jwt_expiretime),
         username: username,
-        orgName: orgName
+        orgName: orgName,
+        registrationToken: registrationToken
     }, app.get('secret'));
 
-    let response = await helper.getRegisteredUser(username, orgName, true);
+    let response = await helper.getRegisteredUser(username, orgName, registrationToken, password, true);
 
     logger.debug('-- returned from registering the username %s for organization %s', username, orgName);
-    if (response && typeof response !== 'string') {
+    if (response && typeof response !== 'string' && response.success == true) {
         logger.debug('Successfully registered the username %s for organization %s', username, orgName);
+        
         response.token = token;
         res.json(response);
     } else {

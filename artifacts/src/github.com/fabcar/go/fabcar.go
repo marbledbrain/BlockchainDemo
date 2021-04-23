@@ -26,6 +26,16 @@ type Car struct {
 	Owner  string `json:"owner"`
 }
 
+type Product struct {
+	Name   string `json:"name"`
+	Quantity string `json:"quantity"`
+	Price string `json:"price"`
+	Owner string `json:"owner"`	
+	Location string `json:"location"`
+}
+
+var i int = 0
+
 type carPrivateDetails struct {
 	Owner string `json:"owner"`
 	Price string `json:"price"`
@@ -56,8 +66,6 @@ func (s *SmartContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response 
 		return s.queryAllCars(APIstub)
 	case "changeCarOwner":
 		return s.changeCarOwner(APIstub, args)
-	case "getHistoryForAsset":
-		return s.getHistoryForAsset(APIstub, args)
 	case "queryCarsByOwner":
 		return s.queryCarsByOwner(APIstub, args)
 	case "restictedMethod":
@@ -78,12 +86,269 @@ func (s *SmartContract) Invoke(APIstub shim.ChaincodeStubInterface) sc.Response 
 		return s.createPrivateCarImplicitForOrg2(APIstub, args)
 	case "queryPrivateDataHash":
 		return s.queryPrivateDataHash(APIstub, args)
+	case "createProduct":
+		return s.createProduct(APIstub, args)
+	case "changeProductOwner":
+		return s.changeProductOwner(APIstub, args)
+	case "queryProduct":
+		return s.queryProduct(APIstub, args)
+	case "queryAllProducts":
+		return s.queryAllProducts(APIstub)
+	case "queryProductsByOwner":
+		return s.queryProductsByOwner(APIstub, args)
+	case "getHistoryForAsset":
+		return s.getHistoryForAsset(APIstub, args)
 	default:
 		return shim.Error("Invalid Smart Contract function name.")
 	}
 
 	// return shim.Error("Invalid Smart Contract function name.")
 }
+
+func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Response {
+	// cars := []Car{
+	// 	Car{Make: "Toyota", Model: "Prius", Colour: "blue", Owner: "Tomoko"},
+	// 	Car{Make: "Ford", Model: "Mustang", Colour: "red", Owner: "Brad"},
+	// 	Car{Make: "Hyundai", Model: "Tucson", Colour: "green", Owner: "Jin Soo"},
+	// 	Car{Make: "Volkswagen", Model: "Passat", Colour: "yellow", Owner: "Max"},
+	// 	Car{Make: "Tesla", Model: "S", Colour: "black", Owner: "Adriana"},
+	// 	Car{Make: "Peugeot", Model: "205", Colour: "purple", Owner: "Michel"},
+	// 	Car{Make: "Chery", Model: "S22L", Colour: "white", Owner: "Aarav"},
+	// 	Car{Make: "Fiat", Model: "Punto", Colour: "violet", Owner: "Pari"},
+	// 	Car{Make: "Tata", Model: "Nano", Colour: "indigo", Owner: "Valeria"},
+	// 	Car{Make: "Holden", Model: "Barina", Colour: "brown", Owner: "Shotaro"},
+	// }
+	
+	products := []Product{
+		Product{Name: "FirstProduct", Quantity: "50", Price: "500", Owner: "Dixita", Location: "Vadodara"},
+	}
+
+	j := 0
+	for j < len(products) {
+		productAsBytes, _ := json.Marshal(products[j])
+		APIstub.PutState("PRODUCT"+strconv.Itoa(i), productAsBytes)
+		i = i + 1
+	}
+
+	return shim.Success(nil)
+}
+
+func (s *SmartContract) createProduct(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) != 5 {
+		return shim.Error("Incorrect number of arguments. Expecting 6")
+	}
+
+	var product = Product{Name: args[0], Quantity: args[1], Price: args[2], Owner: args[3], Location: args[4]}
+
+	productAsBytes, _ := json.Marshal(product)
+	APIstub.PutState("PRODUCT"+strconv.Itoa(i), productAsBytes)
+	i = i + 1
+
+	indexName := "owner~key"
+	colorNameIndexKey, err := APIstub.CreateCompositeKey(indexName, []string{product.Owner, args[0]})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	value := []byte{0x00}
+	APIstub.PutState(colorNameIndexKey, value)
+
+	return shim.Success(productAsBytes)
+}
+
+func (s *SmartContract) changeProductOwner(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) != 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
+	// 0-> key, 1-> owner, 2->price, 3->location
+	productAsBytes, _ := APIstub.GetState(args[0])
+	product := Product{}
+
+	json.Unmarshal(productAsBytes, &product)
+	product.Owner = args[1]
+	product.Price = args[2]
+	product.Location = args[3]
+	productAsBytes, _ = json.Marshal(product)
+	APIstub.PutState(args[0], productAsBytes)
+
+	return shim.Success(productAsBytes)
+}
+
+func (s *SmartContract) queryProduct(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	productAsBytes, _ := APIstub.GetState(args[0])
+	return shim.Success(productAsBytes)
+}
+
+func (s *SmartContract) queryAllProducts(APIstub shim.ChaincodeStubInterface) sc.Response {
+
+	startKey := "PRODUCT0"
+	endKey := "PRODUCT9999"
+
+	resultsIterator, err := APIstub.GetStateByRange(startKey, endKey)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing QueryResults
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"Key\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(queryResponse.Key)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Record\":")
+		// Record is a JSON object, so we write as-is
+		buffer.WriteString(string(queryResponse.Value))
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- queryAllProducts:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+func (t *SmartContract) getHistoryForAsset(stub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) < 1 {
+		return shim.Error("Incorrect number of arguments. Expecting 1")
+	}
+
+	productName := args[0]
+
+	resultsIterator, err := stub.GetHistoryForKey(productName)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+	defer resultsIterator.Close()
+
+	// buffer is a JSON array containing historic values for the marble
+	var buffer bytes.Buffer
+	buffer.WriteString("[")
+
+	bArrayMemberAlreadyWritten := false
+	for resultsIterator.HasNext() {
+		response, err := resultsIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		// Add a comma before array members, suppress it for the first array member
+		if bArrayMemberAlreadyWritten == true {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString("{\"TxId\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(response.TxId)
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"Value\":")
+		// if it was a delete operation on given key, then we need to set the
+		//corresponding value null. Else, we will write the response.Value
+		//as-is (as the Value itself a JSON marble)
+		if response.IsDelete {
+			buffer.WriteString("null")
+		} else {
+			buffer.WriteString(string(response.Value))
+		}
+
+		buffer.WriteString(", \"Timestamp\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
+		buffer.WriteString("\"")
+
+		buffer.WriteString(", \"IsDelete\":")
+		buffer.WriteString("\"")
+		buffer.WriteString(strconv.FormatBool(response.IsDelete))
+		buffer.WriteString("\"")
+
+		buffer.WriteString("}")
+		bArrayMemberAlreadyWritten = true
+	}
+	buffer.WriteString("]")
+
+	fmt.Printf("- getHistoryForAsset returning:\n%s\n", buffer.String())
+
+	return shim.Success(buffer.Bytes())
+}
+
+func (S *SmartContract) queryProductsByOwner(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
+
+	if len(args) != 1 {
+		return shim.Error("Incorrect number of arguments")
+	}
+	owner := args[0]
+
+	ownerAndIdResultIterator, err := APIstub.GetStateByPartialCompositeKey("owner~key", []string{owner})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	defer ownerAndIdResultIterator.Close()
+
+	var i int
+	var id string
+
+	var products []byte
+	bArrayMemberAlreadyWritten := false
+
+	products = append([]byte("["))
+
+	for i = 0; ownerAndIdResultIterator.HasNext(); i++ {
+		responseRange, err := ownerAndIdResultIterator.Next()
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		objectType, compositeKeyParts, err := APIstub.SplitCompositeKey(responseRange.Key)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+
+		id = compositeKeyParts[1]
+		assetAsBytes, err := APIstub.GetState(id)
+
+		if bArrayMemberAlreadyWritten == true {
+			newBytes := append([]byte(","), assetAsBytes...)
+			products = append(products, newBytes...)
+
+		} else {
+			// newBytes := append([]byte(","), carsAsBytes...)
+			products = append(products, assetAsBytes...)
+		}
+
+		fmt.Printf("Found a asset for index : %s asset id : ", objectType, compositeKeyParts[0], compositeKeyParts[1])
+		bArrayMemberAlreadyWritten = true
+
+	}
+
+	products = append(products, []byte("]")...)
+
+	return shim.Success(products)
+}
+
+
+
+//*****************************************************************************************************************************************************************************************************************************************
 
 func (s *SmartContract) queryCar(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
@@ -148,30 +413,6 @@ func (s *SmartContract) test(APIstub shim.ChaincodeStubInterface, args []string)
 
 	carAsBytes, _ := APIstub.GetState(args[0])
 	return shim.Success(carAsBytes)
-}
-
-func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Response {
-	cars := []Car{
-		Car{Make: "Toyota", Model: "Prius", Colour: "blue", Owner: "Tomoko"},
-		Car{Make: "Ford", Model: "Mustang", Colour: "red", Owner: "Brad"},
-		Car{Make: "Hyundai", Model: "Tucson", Colour: "green", Owner: "Jin Soo"},
-		Car{Make: "Volkswagen", Model: "Passat", Colour: "yellow", Owner: "Max"},
-		Car{Make: "Tesla", Model: "S", Colour: "black", Owner: "Adriana"},
-		Car{Make: "Peugeot", Model: "205", Colour: "purple", Owner: "Michel"},
-		Car{Make: "Chery", Model: "S22L", Colour: "white", Owner: "Aarav"},
-		Car{Make: "Fiat", Model: "Punto", Colour: "violet", Owner: "Pari"},
-		Car{Make: "Tata", Model: "Nano", Colour: "indigo", Owner: "Valeria"},
-		Car{Make: "Holden", Model: "Barina", Colour: "brown", Owner: "Shotaro"},
-	}
-
-	i := 0
-	for i < len(cars) {
-		carAsBytes, _ := json.Marshal(cars[i])
-		APIstub.PutState("CAR"+strconv.Itoa(i), carAsBytes)
-		i = i + 1
-	}
-
-	return shim.Success(nil)
 }
 
 func (s *SmartContract) createPrivateCar(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
@@ -331,7 +572,7 @@ func (s *SmartContract) updatePrivateData(APIstub shim.ChaincodeStubInterface, a
 
 func (s *SmartContract) createCar(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
-	if len(args) != 5 {
+	if len(args) != 6 {
 		return shim.Error("Incorrect number of arguments. Expecting 5")
 	}
 
@@ -503,69 +744,6 @@ func (s *SmartContract) changeCarOwner(APIstub shim.ChaincodeStubInterface, args
 	APIstub.PutState(args[0], carAsBytes)
 
 	return shim.Success(carAsBytes)
-}
-
-func (t *SmartContract) getHistoryForAsset(stub shim.ChaincodeStubInterface, args []string) sc.Response {
-
-	if len(args) < 1 {
-		return shim.Error("Incorrect number of arguments. Expecting 1")
-	}
-
-	carName := args[0]
-
-	resultsIterator, err := stub.GetHistoryForKey(carName)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	defer resultsIterator.Close()
-
-	// buffer is a JSON array containing historic values for the marble
-	var buffer bytes.Buffer
-	buffer.WriteString("[")
-
-	bArrayMemberAlreadyWritten := false
-	for resultsIterator.HasNext() {
-		response, err := resultsIterator.Next()
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		// Add a comma before array members, suppress it for the first array member
-		if bArrayMemberAlreadyWritten == true {
-			buffer.WriteString(",")
-		}
-		buffer.WriteString("{\"TxId\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(response.TxId)
-		buffer.WriteString("\"")
-
-		buffer.WriteString(", \"Value\":")
-		// if it was a delete operation on given key, then we need to set the
-		//corresponding value null. Else, we will write the response.Value
-		//as-is (as the Value itself a JSON marble)
-		if response.IsDelete {
-			buffer.WriteString("null")
-		} else {
-			buffer.WriteString(string(response.Value))
-		}
-
-		buffer.WriteString(", \"Timestamp\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(time.Unix(response.Timestamp.Seconds, int64(response.Timestamp.Nanos)).String())
-		buffer.WriteString("\"")
-
-		buffer.WriteString(", \"IsDelete\":")
-		buffer.WriteString("\"")
-		buffer.WriteString(strconv.FormatBool(response.IsDelete))
-		buffer.WriteString("\"")
-
-		buffer.WriteString("}")
-		bArrayMemberAlreadyWritten = true
-	}
-	buffer.WriteString("]")
-
-	fmt.Printf("- getHistoryForAsset returning:\n%s\n", buffer.String())
-
-	return shim.Success(buffer.Bytes())
 }
 
 func (s *SmartContract) createPrivateCarImplicitForOrg1(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {

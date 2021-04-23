@@ -57,6 +57,9 @@ const query = async (channelName, chaincodeName, args, fcn, username, org_name) 
         console.log(`Transaction has been evaluated, result is: ${result.toString()}`);
 
         result = JSON.parse(result.toString());
+        result.organization = org_name
+
+        console.log(result)
         return result
     } catch (error) {
         console.error(`Failed to evaluate transaction: ${error}`);

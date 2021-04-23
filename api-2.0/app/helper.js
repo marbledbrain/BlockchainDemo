@@ -11,10 +11,13 @@ const getCCP = async (org) => {
     let ccpPath;
     if (org == "Org1") {
         ccpPath = path.resolve(__dirname, '..', 'config', 'connection-org1.json');
-
     } else if (org == "Org2") {
         ccpPath = path.resolve(__dirname, '..', 'config', 'connection-org2.json');
-    } else
+    } else if (org == "Org3") {
+        ccpPath = path.resolve(__dirname, '..', 'config', 'connection-org3.json');
+    } else if (org == "Org4") {
+        ccpPath = path.resolve(__dirname, '..', 'config', 'connection-org4.json');
+    }else
         return null
     const ccpJSON = fs.readFileSync(ccpPath, 'utf8')
     const ccp = JSON.parse(ccpJSON);
@@ -28,6 +31,10 @@ const getCaUrl = async (org, ccp) => {
 
     } else if (org == "Org2") {
         caURL = ccp.certificateAuthorities['ca.org2.example.com'].url;
+    } else if (org == "Org3") {
+        caURL = ccp.certificateAuthorities['ca.org3.example.com'].url;
+    } else if (org == "Org4") {
+        caURL = ccp.certificateAuthorities['ca.org4.example.com'].url;
     } else
         return null
     return caURL
@@ -41,6 +48,10 @@ const getWalletPath = async (org) => {
 
     } else if (org == "Org2") {
         walletPath = path.join(process.cwd(), 'org2-wallet');
+    } else if (org == "Org3") {
+        walletPath = path.join(process.cwd(), 'org3-wallet');
+    } else if (org == "Org4") {
+        walletPath = path.join(process.cwd(), 'org4-wallet');
     } else
         return null
     return walletPath
@@ -52,7 +63,7 @@ const getAffiliation = async (org) => {
     return org == "Org1" ? 'org1.department1' : 'org2.department1'
 }
 
-const getRegisteredUser = async (username, userOrg, isJson) => {
+const getRegisteredUser = async (username, userOrg, registrationToken, password, isJson) => {
     let ccp = await getCCP(userOrg)
 
     const caURL = await getCaUrl(userOrg, ccp)
@@ -72,6 +83,7 @@ const getRegisteredUser = async (username, userOrg, isJson) => {
         return response
     }
 
+
     // Check to see if we've already enrolled the admin user.
     let adminIdentity = await wallet.get('admin');
     if (!adminIdentity) {
@@ -80,6 +92,9 @@ const getRegisteredUser = async (username, userOrg, isJson) => {
         adminIdentity = await wallet.get('admin');
         console.log("Admin Enrolled Successfully")
     }
+    
+
+    if((userOrg == "Org1" && registrationToken == "org1token") || (userOrg == "Org2" && registrationToken == "org2token") || (userOrg == "Org3" && registrationToken == "org3token") || (userOrg == "Org4" && registrationToken == "org4token")){
 
     // build a user object for authenticating with the CA
     const provider = wallet.getProviderRegistry().getProvider(adminIdentity.type);
@@ -116,6 +131,24 @@ const getRegisteredUser = async (username, userOrg, isJson) => {
             mspId: 'Org2MSP',
             type: 'X.509',
         };
+    } else if (userOrg == "Org3") {
+        x509Identity = {
+            credentials: {
+                certificate: enrollment.certificate,
+                privateKey: enrollment.key.toBytes(),
+            },
+            mspId: 'Org3MSP',
+            type: 'X.509',
+        };
+    } else if (userOrg == "Org4") {
+        x509Identity = {
+            credentials: {
+                certificate: enrollment.certificate,
+                privateKey: enrollment.key.toBytes(),
+            },
+            mspId: 'Org4MSP',
+            type: 'X.509',
+        };
     }
 
     await wallet.put(username, x509Identity);
@@ -124,8 +157,18 @@ const getRegisteredUser = async (username, userOrg, isJson) => {
     var response = {
         success: true,
         message: username + ' enrolled Successfully',
+        username: username,
+        password: password,
     };
     return response
+    }
+    else{
+        var response = {
+            success: false,
+            message: username + ' not enrolled: token mismatch',
+        };
+        return response
+    }
 }
 
 const isUserRegistered = async (username, userOrg) => {
@@ -149,6 +192,10 @@ const getCaInfo = async (org, ccp) => {
 
     } else if (org == "Org2") {
         caInfo = ccp.certificateAuthorities['ca.org2.example.com'];
+    } else if (org == "Org3") {
+        caInfo = ccp.certificateAuthorities['ca.org3.example.com'];
+    } else if (org == "Org4") {
+        caInfo = ccp.certificateAuthorities['ca.org4.example.com'];
     } else
         return null
     return caInfo
@@ -196,6 +243,24 @@ const enrollAdmin = async (org, ccp) => {
                     privateKey: enrollment.key.toBytes(),
                 },
                 mspId: 'Org2MSP',
+                type: 'X.509',
+            };
+        } else if (org == "Org3") {
+            x509Identity = {
+                credentials: {
+                    certificate: enrollment.certificate,
+                    privateKey: enrollment.key.toBytes(),
+                },
+                mspId: 'Org3MSP',
+                type: 'X.509',
+            };
+        } else if (org == "Org4") {
+            x509Identity = {
+                credentials: {
+                    certificate: enrollment.certificate,
+                    privateKey: enrollment.key.toBytes(),
+                },
+                mspId: 'Org4MSP',
                 type: 'X.509',
             };
         }
