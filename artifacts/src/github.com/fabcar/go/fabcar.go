@@ -135,14 +135,19 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 
 func (s *SmartContract) createProduct(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
-	if len(args) != 5 {
-		return shim.Error("Incorrect number of arguments. Expecting 6")
+	logger.Infof("********Arguments:  ")
+	fmt.Println(args)
+	if len(args) <= 7 {
+		return shim.Error("Incorrect number of arguments. Expecting 7")
 	}
+	args[0] = "PRODUCT"+strconv.Itoa(i)
+	var product = Product{Name: args[1], Quantity: args[2], Price: args[3], Owner: args[4], Location: args[5]}
 
-	var product = Product{Name: args[0], Quantity: args[1], Price: args[2], Owner: args[3], Location: args[4]}
-
+	
 	productAsBytes, _ := json.Marshal(product)
-	APIstub.PutState("PRODUCT"+strconv.Itoa(i), productAsBytes)
+	APIstub.PutState(args[0], productAsBytes)
+	
+	
 	i = i + 1
 
 	indexName := "owner~key"
@@ -348,7 +353,7 @@ func (S *SmartContract) queryProductsByOwner(APIstub shim.ChaincodeStubInterface
 
 
 
-//*****************************************************************************************************************************************************************************************************************************************
+//*******************************************************************************
 
 func (s *SmartContract) queryCar(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
@@ -439,7 +444,7 @@ func (s *SmartContract) createPrivateCar(APIstub shim.ChaincodeStubInterface, ar
 	if !ok {
 		return shim.Error("car must be a key in the transient map")
 	}
-	logger.Infof("********************8   " + string(carDataAsBytes))
+	logger.Infof("********8   " + string(carDataAsBytes))
 
 	if len(carDataAsBytes) == 0 {
 		return shim.Error("333333 -marble value in the transient map must be a non-empty JSON string")
@@ -538,7 +543,7 @@ func (s *SmartContract) updatePrivateData(APIstub shim.ChaincodeStubInterface, a
 	if !ok {
 		return shim.Error("car must be a key in the transient map")
 	}
-	logger.Infof("********************8   " + string(carDataAsBytes))
+	logger.Infof("********8   " + string(carDataAsBytes))
 
 	if len(carDataAsBytes) == 0 {
 		return shim.Error("333333 -marble value in the transient map must be a non-empty JSON string")

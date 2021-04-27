@@ -32,7 +32,7 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
         }
 
         
-
+        console.log('********************CONNECTION*****************************************************************');
         const connectOptions = {
             wallet, identity: username, discovery: { enabled: true, asLocalhost: true },
             eventHandlerOptions: {
@@ -44,6 +44,11 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
             // }
         }
 
+        console.log('connection options: ', connectOptions);
+        console.log('ccp', ccp);
+
+        console.log('********************CONNECTION  END*****************************************************************');
+
         // Create a new gateway for connecting to our peer node.
         const gateway = new Gateway();
         await gateway.connect(ccp, connectOptions);
@@ -51,7 +56,11 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
         // Get the network (channel) our contract is deployed to.
         const network = await gateway.getNetwork(channelName);
 
+        console.log('Network:', network);
+        
+
         const contract = network.getContract(chaincodeName);
+        console.log('contract: ', contract);
 
         let result
         let message;
@@ -76,8 +85,9 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
             message = `Successfully submitted transient data`
         }
         else if (fcn === "createProduct"){
-            result = await contract.submitTransaction(fcn, args[0], args[1], args[2], args[3], args[4], org_name);
-            message = `Successfully added the car asset with key ${args[0]}`
+            console.log(args);
+            result = await contract.submitTransaction(fcn, args[0], args[1], args[2], args[3], args[4], args[5], org_name);
+            message = `Successfully added the product asset with key ${args[0]}`
 
         }
         else {
