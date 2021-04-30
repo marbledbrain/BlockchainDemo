@@ -135,11 +135,11 @@ func (s *SmartContract) initLedger(APIstub shim.ChaincodeStubInterface) sc.Respo
 
 func (s *SmartContract) createProduct(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
-	logger.Infof("********Arguments:  ")
+	logger.Infof("Argument Length: %d",len(args))
 	fmt.Println(args)
-	if len(args) <= 7 {
-		return shim.Error("Incorrect number of arguments. Expecting 7")
-	}
+	// if len(args) != 7 {
+	// 	return shim.Error("Incorrect number of arguments. Expecting 7")
+	// }
 	args[0] = "PRODUCT"+strconv.Itoa(i)
 	var product = Product{Name: args[1], Quantity: args[2], Price: args[3], Owner: args[4], Location: args[5]}
 
@@ -578,7 +578,7 @@ func (s *SmartContract) updatePrivateData(APIstub shim.ChaincodeStubInterface, a
 func (s *SmartContract) createCar(APIstub shim.ChaincodeStubInterface, args []string) sc.Response {
 
 	if len(args) != 6 {
-		return shim.Error("Incorrect number of arguments. Expecting 5")
+		return shim.Error("Incorrect number of arguments. Expecting 6")
 	}
 
 	var car = Car{Make: args[1], Model: args[2], Colour: args[3], Owner: args[4]}

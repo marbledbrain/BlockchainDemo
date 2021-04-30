@@ -44,8 +44,8 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
             // }
         }
 
-        console.log('connection options: ', connectOptions);
-        console.log('ccp', ccp);
+        //console.log('connection options: ', connectOptions);
+        //console.log('ccp', ccp);
 
         console.log('********************CONNECTION  END*****************************************************************');
 
@@ -56,11 +56,11 @@ const invokeTransaction = async (channelName, chaincodeName, fcn, args, username
         // Get the network (channel) our contract is deployed to.
         const network = await gateway.getNetwork(channelName);
 
-        console.log('Network:', network);
+        //console.log('Network:', network);
         
 
         const contract = network.getContract(chaincodeName);
-        console.log('contract: ', contract);
+        //console.log('contract: ', contract);
 
         let result
         let message;
